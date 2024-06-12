@@ -1,32 +1,47 @@
-import { useState } from "react";
-import styled from "styled-components";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams, useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { Section } from '../pages/Home';
+import { useAuth } from '../context/AuthContext';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useState, useEffect } from 'react';
 
-const Container = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: #ffffff;
-  border-radius: 16px;
-`;
+const fetchExpense = async (id) => {
+  const { data } = await axios.get(`/api/expenses/${id}`);
+  return data;
+};
 
-const InputGroup = styled.div`
+const DetailContainer = styled.div`
   display: flex;
   flex-direction: column;
-  margin-bottom: 10px;
+  align-items: center;
+  padding: 20px;
+  background-color: rgb(255, 255, 255);
+  border-radius: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+`;
+
+const DetailRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 20px;
 
   label {
     margin-bottom: 5px;
-    font-size: 14px;
-    color: #333;
     text-align: left;
   }
 
   input {
-    padding: 10px;
+    padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+    width: 100%;
   }
 `;
 
@@ -37,120 +52,127 @@ const ButtonGroup = styled.div`
 
 const Button = styled.button`
   padding: 10px 20px;
-  background-color: ${(props) => (props.danger ? "#ff4d4d" : "#007bff")};
-  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
+  background-color: ${(props) => (props.$danger ? '#e74c3c' : '#007bff')};
+  color: white;
 
   &:hover {
-    background-color: ${(props) => (props.danger ? "#cc0000" : "#0056b3")};
+    background-color: ${(props) => (props.$danger ? '#c0392b' : '#0056b3')};
   }
 `;
 
-const BackButton = styled(Button)`
-  background-color: #6c757d;
-
-  &:hover {
-    background-color: #5a6268;
-  }
-`;
-
-export default function Detail({ expenses, setExpenses }) {
-  const navigate = useNavigate();
+const Detail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { token } = useAuth();
+  const [expense, setExpense] = useState(null);
 
-  const selectedExpense = expenses.find((element) => element.id === id);
+  const { data, error, isLoading } = useQuery({
+    queryKey: ['expense', id],
+    queryFn: () => fetchExpense(id),
+    enabled: !!id,
+  });
 
-  const [date, setDate] = useState(selectedExpense.date);
-  const [item, setItem] = useState(selectedExpense.item);
-  const [amount, setAmount] = useState(selectedExpense.amount);
-  const [description, setDescription] = useState(selectedExpense.description);
-
-  const editExpense = () => {
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-    if (!datePattern.test(date)) {
-      alert("날짜를 YYYY-MM-DD 형식으로 입력해주세요.");
-      return;
+  useEffect(() => {
+    if (data) {
+      setExpense(data);
     }
-    if (!item || amount <= 0) {
-      alert("유효한 항목과 금액을 입력해주세요.");
-      return;
-    }
+  }, [data]);
 
-    const newExpenses = expenses.map((expense) => {
-      if (expense.id !== id) {
-        return expense;
-      } else {
-        return {
-          ...expense,
-          date: date,
-          item: item,
-          amount: amount,
-          description: description,
-        };
-      }
-    });
-    setExpenses(newExpenses);
-    navigate("/");
+  const handleUpdate = async () => {
+    try {
+      await axios.patch(`/api/expenses/${id}`, expense, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      toast.success('지출 항목이 업데이트되었습니다.');
+    } catch (error) {
+      toast.error('지출 항목 업데이트 중 오류가 발생했습니다.');
+    }
   };
 
-  const deleteExpense = () => {
-    const newExpenses = expenses.filter((expense) => expense.id !== id);
-    setExpenses(newExpenses);
-    navigate("/");
+  const handleDelete = async () => {
+    try {
+      await axios.delete(`/api/expenses/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      toast.success('지출 항목이 삭제되었습니다.');
+      navigate('/');
+    } catch (error) {
+      toast.error('지출 항목 삭제 중 오류가 발생했습니다.');
+    }
   };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setExpense((prev) => ({
+      ...prev,
+      [name]: name === 'amount' ? parseInt(value, 10) : value,
+    }));
+  };
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>An error occurred: {error.message}</div>;
 
   return (
-    <Container>
-      <InputGroup>
-        <label htmlFor="date">날짜</label>
-        <input
-          type="text"
-          id="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          placeholder="YYYY-MM-DD"
-        />
-      </InputGroup>
-      <InputGroup>
-        <label htmlFor="item">항목</label>
-        <input
-          type="text"
-          id="item"
-          value={item}
-          onChange={(e) => setItem(e.target.value)}
-          placeholder="지출 항목"
-        />
-      </InputGroup>
-      <InputGroup>
-        <label htmlFor="amount">금액</label>
-        <input
-          type="number"
-          id="amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="지출 금액"
-        />
-      </InputGroup>
-      <InputGroup>
-        <label htmlFor="description">내용</label>
-        <input
-          type="text"
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="지출 내용"
-        />
-      </InputGroup>
-      <ButtonGroup>
-        <Button onClick={editExpense}>수정</Button>
-        <Button danger="true" onClick={deleteExpense}>
-          삭제
-        </Button>
-        <BackButton onClick={() => navigate(-1)}>뒤로 가기</BackButton>
-      </ButtonGroup>
-    </Container>
+    <Section>
+      <DetailContainer>
+        <DetailRow>
+          <label htmlFor="date">날짜</label>
+          <input
+            type="text"
+            id="date"
+            name="date"
+            value={expense?.date || ''}
+            onChange={handleChange}
+          />
+        </DetailRow>
+        <DetailRow>
+          <label htmlFor="item">항목</label>
+          <input
+            type="text"
+            id="item"
+            name="item"
+            value={expense?.item || ''}
+            onChange={handleChange}
+          />
+        </DetailRow>
+        <DetailRow>
+          <label htmlFor="amount">금액</label>
+          <input
+            type="number"
+            id="amount"
+            name="amount"
+            value={expense?.amount || ''}
+            onChange={handleChange}
+          />
+        </DetailRow>
+        <DetailRow>
+          <label htmlFor="description">내용</label>
+          <input
+            type="text"
+            id="description"
+            name="description"
+            value={expense?.description || ''}
+            onChange={handleChange}
+          />
+        </DetailRow>
+        <ButtonGroup>
+          <Button onClick={handleUpdate}>수정</Button>
+          <Button $danger="true" onClick={handleDelete}>
+            삭제
+          </Button>
+          <Button onClick={() => navigate('/')}>뒤로 가기</Button>
+        </ButtonGroup>
+      </DetailContainer>
+      <ToastContainer />
+    </Section>
   );
-}
+};
+
+export default Detail;

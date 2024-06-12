@@ -1,6 +1,8 @@
-import { Section } from "../pages/Home";
-import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
+import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
+import { Section } from '../pages/Home';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const ExpenseItemList = styled.div`
   display: flex;
@@ -60,27 +62,49 @@ const ExpenseDetails = styled.div`
   }
 `;
 
-export default function ExpenseList({ expenses }) {
+const NoExpensesMessage = styled.div`
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  background-color: rgb(255, 255, 255);
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 20px;
+`;
+
+const ExpenseList = ({ expenses, userData }) => {
   const navigate = useNavigate();
+
+  const handleItemClick = (expense) => {
+    if (expense.createdBy === userData.nickname) {
+      navigate(`/detail/${expense.id}`);
+    } else {
+      toast.error('본인의 지출만 수정할 수 있습니다.');
+    }
+  };
 
   return (
     <Section>
-      <ExpenseItemList>
-        {expenses.map((expense) => (
-          <ExpenseItem
-            key={expense.id}
-            onClick={() => {
-              navigate(`/detail/${expense.id}`);
-            }}
-          >
-            <ExpenseDetails>
-              <span>{expense.date}</span>
-              <span>{`${expense.item} - ${expense.description}`}</span>
-            </ExpenseDetails>
-            <span>{expense.amount.toLocaleString()} 원</span>
-          </ExpenseItem>
-        ))}
-      </ExpenseItemList>
+      {expenses.length === 0 ? (
+        <NoExpensesMessage>지출이 없습니다.</NoExpensesMessage>
+      ) : (
+        <ExpenseItemList>
+          {expenses.map((expense) => (
+            <ExpenseItem
+              key={expense.id}
+              onClick={() => handleItemClick(expense)}
+            >
+              <ExpenseDetails>
+                <span>{expense.date}</span>
+                <span>{`${expense.item} - ${expense.description} (by ${expense.createdBy})`}</span>
+              </ExpenseDetails>
+              <span>{expense.amount.toLocaleString()} 원</span>
+            </ExpenseItem>
+          ))}
+        </ExpenseItemList>
+      )}
     </Section>
   );
-}
+};
+
+export default ExpenseList;

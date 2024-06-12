@@ -1,7 +1,8 @@
-import { Section } from "../pages/Home";
-import styled from "styled-components";
-import { useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import styled from 'styled-components';
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import { Section } from '../pages/Home';
 
 const InputRow = styled.div`
   display: flex;
@@ -45,41 +46,58 @@ const AddButton = styled.button`
   }
 `;
 
-export default function CreateExpense({ month, expenses, setExpenses }) {
-  const [newDate, setNewDate] = useState(
-    `2024-${String(month).padStart(2, "0")}-01`
+const createExpense = async (newExpense) => {
+  const response = await axios.post(
+    'http://localhost:5000/expenses',
+    newExpense
   );
-  const [newItem, setNewItem] = useState("");
-  const [newAmount, setNewAmount] = useState("");
-  const [newDescription, setNewDescription] = useState("");
+  return response.data;
+};
+
+const CreateExpense = ({ month, userData }) => {
+  const queryClient = useQueryClient();
+  const [newDate, setNewDate] = useState(
+    `2024-${String(month).padStart(2, '0')}-01`
+  );
+  const [newItem, setNewItem] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: createExpense,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['expenses']);
+    },
+  });
 
   const handleAddExpense = () => {
     const datePattern = /^\d{4}-\d{2}-\d{2}$/;
     if (!datePattern.test(newDate)) {
-      alert("날짜를 YYYY-MM-DD 형식으로 입력해주세요.");
+      alert('날짜를 YYYY-MM-DD 형식으로 입력해주세요.');
       return;
     }
 
     const parsedAmount = parseInt(newAmount, 10);
     if (!newItem || parsedAmount <= 0) {
-      alert("유효한 항목과 금액을 입력해주세요.");
+      alert('유효한 항목과 금액을 입력해주세요.');
       return;
     }
 
     const newExpense = {
-      id: uuidv4(),
-      month: parseInt(newDate.split("-")[1], 10),
+      month: parseInt(newDate.split('-')[1], 10),
       date: newDate,
       item: newItem,
       amount: parsedAmount,
       description: newDescription,
+      createdBy: userData.nickname,
     };
 
-    setExpenses([...expenses, newExpense]);
-    setNewDate(`2024-${String(month).padStart(2, "0")}-01`);
-    setNewItem("");
-    setNewAmount("");
-    setNewDescription("");
+    mutation.mutate(newExpense);
+
+    setNewDate(`2024-${String(month).padStart(2, '0')}-01`);
+    setNewItem('');
+    setNewAmount('');
+    setNewDescription('');
   };
 
   return (
@@ -129,4 +147,6 @@ export default function CreateExpense({ month, expenses, setExpenses }) {
       </InputRow>
     </Section>
   );
-}
+};
+
+export default CreateExpense;
