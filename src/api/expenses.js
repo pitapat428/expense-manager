@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000';
+const API_URL = 'https://bead-translucent-fossa.glitch.me';
 
 export const fetchExpenses = async () => {
   const response = await axios.get(`${API_URL}/expenses`);

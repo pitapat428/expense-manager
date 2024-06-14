@@ -70,7 +70,7 @@ const Profile = () => {
     validateForm(nickname, e.target.files[0]);
   };
 
-  const validateForm = (nickname, avatar) => {
+  const validateForm = (nickname) => {
     setIsFormValid(nickname.trim().length > 0);
   };
 
@@ -96,7 +96,7 @@ const Profile = () => {
       );
 
       toast.success(response.data.message);
-      updateProfile(response.data.updatedUserData);
+      updateProfile(response.data);
     } catch (error) {
       console.error('Profile update error:', error);
       toast.error('프로필 업데이트 중 오류가 발생했습니다.');

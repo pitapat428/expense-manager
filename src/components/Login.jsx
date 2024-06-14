@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
 
 const Container = styled.div`
@@ -64,10 +63,7 @@ const SecondaryButton = styled(Button)`
     theme.secondaryButtonColor || 'rgb(108, 117, 125)'};
 `;
 
-const API_URL = 'https://moneyfulpublicpolicy.co.kr';
-
 const Login = () => {
-  const { login } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     id: '',
@@ -75,6 +71,7 @@ const Login = () => {
     nickname: '',
   });
   const [isFormValid, setIsFormValid] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -93,20 +90,9 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted with data:', formData);
     try {
-      const url = isLogin ? `${API_URL}/login` : `${API_URL}/register`;
-      console.log('Sending request to:', url);
-      const response = await axios.post(url, formData);
-      console.log('Response received:', response.data);
-
-      if (isLogin) {
-        login(response.data);
-        navigate('/');
-      } else {
-        alert('회원가입 완료');
-        setIsLogin(true);
-      }
+      await login(formData);
+      navigate('/');
     } catch (error) {
       console.error('Authentication error:', error);
       alert('인증 오류가 발생했습니다.');
@@ -129,7 +115,6 @@ const Login = () => {
             required
             minLength="4"
             maxLength="10"
-            tabIndex="0"
           />
           <Label htmlFor="password">비밀번호</Label>
           <Input
@@ -142,7 +127,6 @@ const Login = () => {
             required
             minLength="4"
             maxLength="15"
-            tabIndex="0"
           />
           {!isLogin && (
             <>
@@ -156,20 +140,14 @@ const Login = () => {
                 onChange={handleChange}
                 required
                 maxLength="10"
-                tabIndex="0"
               />
             </>
           )}
-          <Button
-            type="submit"
-            $isActive={isFormValid}
-            tabIndex="0"
-            disabled={!isFormValid}
-          >
+          <Button type="submit" $isActive={isFormValid} disabled={!isFormValid}>
             {isLogin ? '로그인' : '회원가입'}
           </Button>
         </Form>
-        <SecondaryButton onClick={() => setIsLogin(!isLogin)} tabIndex="0">
+        <SecondaryButton onClick={() => setIsLogin(!isLogin)}>
           {isLogin ? '회원가입' : '로그인'}
         </SecondaryButton>
       </FormContainer>

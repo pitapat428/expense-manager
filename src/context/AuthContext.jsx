@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
@@ -11,29 +11,36 @@ export const AuthProvider = ({ children }) => {
     const savedToken = localStorage.getItem('token');
     const savedUserData = localStorage.getItem('userData');
 
-    if (savedToken) {
+    if (savedToken && savedUserData) {
       setToken(savedToken);
-    }
-    if (savedUserData) {
       try {
-        const parsedUserData = JSON.parse(savedUserData);
-        setUserData(parsedUserData);
+        setUserData(JSON.parse(savedUserData));
       } catch (error) {
         console.error('Error parsing userData:', error);
-        localStorage.removeItem('userData');
       }
     }
   }, []);
 
-  const login = async ({ accessToken, userId, avatar, nickname }) => {
-    setToken(accessToken);
-    setUserData({ userId, avatar, nickname });
+  const login = async (formData) => {
+    try {
+      const response = await axios.post(
+        'https://moneyfulpublicpolicy.co.kr/login',
+        formData
+      );
+      const { accessToken, userId, avatar, nickname } = response.data;
 
-    localStorage.setItem('token', accessToken);
-    localStorage.setItem(
-      'userData',
-      JSON.stringify({ userId, avatar, nickname })
-    );
+      setToken(accessToken);
+      setUserData({ userId, avatar, nickname });
+
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem(
+        'userData',
+        JSON.stringify({ userId, avatar, nickname })
+      );
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
@@ -43,15 +50,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('userData');
   };
 
-  const updateProfile = (updatedUserData) => {
-    setUserData(updatedUserData);
-    localStorage.setItem('userData', JSON.stringify(updatedUserData));
-  };
-
   return (
-    <AuthContext.Provider
-      value={{ userData, token, login, logout, updateProfile }}
-    >
+    <AuthContext.Provider value={{ userData, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -59,21 +59,4 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   return useContext(AuthContext);
-};
-
-export const RequireAuth = ({ children }) => {
-  const { token } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!token) {
-      navigate('/login');
-    }
-  }, [token, navigate]);
-
-  if (!token) {
-    return null;
-  }
-
-  return children;
 };
